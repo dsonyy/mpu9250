@@ -15,12 +15,12 @@ class MPU9250Node(Node):
 
         self.mpu = None
         self.init_mpu()
-        
+
         self.imu_pub = self.create_publisher(Imu, "imu/raw", 10)
         self.mag_pub = self.create_publisher(MagneticField, "imu/mag", 10)
         self.temp_pub = self.create_publisher(Temperature, "imu/temp", 10)
 
-        self.rate = 10
+        self.rate = 100
         self.timer = self.create_timer(1.0 / self.rate, self.publish)
 
     def init_mpu(self):
@@ -29,16 +29,19 @@ class MPU9250Node(Node):
             address_mpu_master=MPU9050_ADDRESS_68,
             address_mpu_slave=None,
             bus=1,
-            gfs=GFS_1000,
-            afs=AFS_8G,
+            gfs=GFS_2000,
+            afs=AFS_16G,
             mfs=AK8963_BIT_16,
             mode=AK8963_MODE_C100HZ)
 
         self.mpu.configure()  # Apply the settings to the registers.
+        self.calibrate()
 
     def calibrate(self):
+        self.get_logger().info("Sensors calibration started.")
         self.mpu.calibrate()  # Calibrate sensors
         self.mpu.configure()  # The calibration resets the sensors, so you need to reconfigure them
+        self.get_logger().info("Sensors calibration completed.")
 
     def get_calibration(self):
         abias = self.mpu.abias  # Get the master accelerometer biases
@@ -46,6 +49,18 @@ class MPU9250Node(Node):
         magScale = self.mpu.magScale  # Get magnetometer soft iron distortion
         mbias = self.mpu.mbias  # Get magnetometer hard iron distortion
         return abias, gbias, magScale, mbias
+
+    @staticmethod
+    def rescale_accel(accel):
+        return accel * 9.80665
+
+    @staticmethod
+    def rescale_gyro(gyro):
+        return gyro * 0.0174533
+
+    @staticmethod
+    def rescale_mag(mag):
+        return mag * 10e-6
 
     def publish(self):
         if self.mpu is None:
@@ -62,19 +77,19 @@ class MPU9250Node(Node):
         imu_msg = Imu()
         imu_msg.header.stamp = stamp
         imu_msg.header.frame_id = frame_id
-        imu_msg.linear_acceleration.x = gyro[0]
-        imu_msg.linear_acceleration.y = gyro[1]
-        imu_msg.linear_acceleration.z = gyro[2]
-        imu_msg.angular_velocity.x = accel[0]
-        imu_msg.angular_velocity.y = accel[1]
-        imu_msg.angular_velocity.z = accel[2]
+        imu_msg.linear_acceleration.x = self.rescale_accel(accel[0])
+        imu_msg.linear_acceleration.y = self.rescale_accel(accel[1])
+        imu_msg.linear_acceleration.z = self.rescale_accel(accel[2])
+        imu_msg.angular_velocity.x = self.rescale_gyro(gyro[0])
+        imu_msg.angular_velocity.y = self.rescale_gyro(gyro[1])
+        imu_msg.angular_velocity.z = self.rescale_gyro(gyro[2])
 
         mag_msg = MagneticField()
         mag_msg.header.stamp = stamp
         mag_msg.header.frame_id = frame_id
-        mag_msg.magnetic_field.x = mag[0]
-        mag_msg.magnetic_field.y = mag[1]
-        mag_msg.magnetic_field.z = mag[2]
+        mag_msg.magnetic_field.x = self.rescale_mag(mag[0])
+        mag_msg.magnetic_field.y = self.rescale_mag(mag[1])
+        mag_msg.magnetic_field.z = self.rescale_mag(mag[2])
 
         temp_msg = Temperature()
         temp_msg.header.stamp = stamp
