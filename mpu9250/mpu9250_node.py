@@ -16,7 +16,7 @@ class MPU9250Node(Node):
         self.mpu = None
         self.init_mpu()
 
-        self.imu_pub = self.create_publisher(Imu, "imu/raw", 10)
+        self.imu_pub = self.create_publisher(Imu, "imu/data_raw", 10)
         self.mag_pub = self.create_publisher(MagneticField, "imu/mag", 10)
         self.temp_pub = self.create_publisher(Temperature, "imu/temp", 10)
 
