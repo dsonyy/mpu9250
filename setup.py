@@ -20,7 +20,7 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'my_node = mpu9250.my_node:main'
+            'mpu9250_node = mpu9250.mpu9250_node:main'
         ],
     },
 )
