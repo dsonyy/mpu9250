@@ -12,7 +12,10 @@ from mpu9250_jmdev.mpu_9250 import MPU9250
 class MPU9250Node(Node):
     def __init__(self):
         super().__init__("mpu9250_node")
+
         self.mpu = None
+        self.init_mpu()
+        
         self.imu_pub = self.create_publisher(Imu, "imu/raw", 10)
         self.mag_pub = self.create_publisher(MagneticField, "imu/mag", 10)
         self.temp_pub = self.create_publisher(Temperature, "imu/temp", 10)
@@ -45,6 +48,9 @@ class MPU9250Node(Node):
         return abias, gbias, magScale, mbias
 
     def publish(self):
+        if self.mpu is None:
+            return
+
         stamp = self.get_clock().now().to_msg()
         frame_id = "base_link"
 
